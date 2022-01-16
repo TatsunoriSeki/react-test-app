@@ -3,10 +3,12 @@ import { useCallback, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { User } from "../types/api/user";
 import { useMessage } from "./useMessage";
+import { useLoginUser } from "../hooks/useLoginUser";
 
 export const useAuth = () => {
   const history = useHistory();
   const { showMessage } = useMessage();
+  const { setLoginUser } = useLoginUser();
 
   const [loading, setLoading] = useState(false);
 
@@ -15,20 +17,26 @@ export const useAuth = () => {
       setLoading(true);
       axios
         .get<User>(`https://jsonplaceholder.typicode.com/users/${id}`)
-        .then((res) => {
+        .then(async (res) => {
           if (res.data) {
-            showMessage({ title: "ログイン成功", status: "success" });
+            // contextにログインユーザーの情報を保存
+            // サンプル的にidが10のユーザーを管理者としてみる
+            const isAdmin = res.data.id === 10 ? true : false;
+            setLoginUser({ ...res.data, isAdmin });
+            showMessage({ title: "ログインしました", status: "success" });
             history.push("/home");
           } else {
             showMessage({ title: "ユーザーが見つかりません", status: "error" });
+            setLoading(false);
           }
         })
-        .catch(() =>
-          showMessage({ title: "ログインできません", status: "error" })
-        )
-        .finally(() => setLoading(false));
+        .catch(() => {
+          showMessage({ title: "ユーザーが見つかりません", status: "error" });
+          setLoading(false);
+        });
     },
-    [history, showMessage]
+    [history, setLoginUser, showMessage]
   );
+
   return { login, loading };
 };
